@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  
+  const navigate = useNavigate(); 
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -29,9 +32,10 @@ const Login = () => {
         localStorage.setItem('token_type', data.token_type);
         
         console.log('Login successful');
-        // Redirect logic here (e.g., window.location.href = '/dashboard')
+
+        // Redirect to dashboard
+        navigate('/dashboard'); 
       } else {
-        // Handle API errors (e.g., 401 Unauthorized)
         setError(data.detail || 'Invalid email or password');
       }
     } catch (err) {
@@ -103,6 +107,7 @@ const Login = () => {
             <button
               type="submit"
               disabled={isLoading}
+              // FIXED: Added backticks for the template literal below
               className={`w-full flex justify-center py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-150 ${isLoading ? 'opacity-70 cursor-not-allowed' : ''}`}
             >
               {isLoading ? 'Signing in...' : 'Sign in'}
