@@ -10,63 +10,67 @@ const Signup = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Action: Connect to http://127.0.0.1
-    console.log('Form Data:', formData);
+    
+    // Log data being sent
+    console.log("Sending to backend:", formData);
+
+    try {
+      const response = await fetch('https://your-backend-api.com/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
+
+      if (response.ok) {
+        console.log("Success!");
+      } else {
+        console.error("Server error");
+      }
+    } catch (error) {
+      console.error("Network error:", error);
+    }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-10">
-        <div className="text-center mb-10">
-          <h2 className="text-3xl font-extrabold text-gray-900">Sign Up</h2>
-          <p className="mt-2 text-sm text-gray-500">Join the squad today.</p>
-        </div>
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-6">
+      <div className="w-full max-w-sm bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
+        <h2 className="text-3xl font-extrabold text-gray-900 text-center mb-2">Join us</h2>
+        <p className="text-gray-500 text-center mb-8 text-sm">Enter your details to create an account</p>
         
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider">
-              Email Address
-            </label>
+            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Email Address</label>
             <input
               type="email"
               name="email"
-              required
               onChange={handleChange}
-              className="mt-1 block w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:bg-white focus:border-transparent outline-none transition-all"
-              placeholder="alex@example.com"
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
+              placeholder="name@company.com"
+              required
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider">
-              Password
-            </label>
+            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Password</label>
             <input
               type="password"
               name="password"
-              required
               onChange={handleChange}
-              className="mt-1 block w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:bg-white focus:border-transparent outline-none transition-all"
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
               placeholder="••••••••"
+              required
             />
           </div>
 
           <button
             type="submit"
-            className="w-full bg-indigo-600 text-white py-3 rounded-lg font-bold shadow-md hover:bg-indigo-700 hover:shadow-lg transform transition-active:scale-95 transition-all"
+            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-lg shadow-lg shadow-indigo-200 transition duration-300"
           >
             Create Account
           </button>
         </form>
-
-        <div className="mt-8 text-center">
-          <span className="text-sm text-gray-600">Already a member? </span>
-          <a href="/login" className="text-sm font-bold text-indigo-600 hover:text-indigo-500 transition-colors">
-            Sign In
-          </a>
-        </div>
       </div>
     </div>
   );
