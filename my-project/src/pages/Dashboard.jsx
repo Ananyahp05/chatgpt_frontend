@@ -1,122 +1,318 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Mic, MicOff, Send, LogOut, Plus, Sparkles, MessageSquare, Menu, X } from 'lucide-react';
 
 const Dashboard = () => {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+    const [input, setInput] = useState('');
+    const [messages, setMessages] = useState([]);
+    const [history, setHistory] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [isListening, setIsListening] = useState(false);
+    const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+    const [activeSessionId, setActiveSessionId] = useState(null);
 
-  // Example data for the dashboard
-  const stats = [
-    { name: 'Total Revenue', value: '$45,231', change: '+12.5%', icon: '💰' },
-    { name: 'Active Users', value: '2,345', change: '+3.2%', icon: '👥' },
-    { name: 'New Signups', value: '122', change: '+18.1%', icon: '📈' },
-    { name: 'Server Uptime', value: '99.9%', change: 'Stable', icon: '⚡' },
-  ];
+    const messagesEndRef = useRef(null);
 
-  const handleLogout = () => {
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
-    window.location.href = '/login';
-  };
+    // Get user email from localStorage
+    const savedEmail = localStorage.getItem('user_email');
+    const [userEmail, setUserEmail] = useState(savedEmail || "");
 
-  return (
-    <div className="min-h-screen bg-slate-50 flex">
-      {/* Sidebar */}
-      <aside className={`${isSidebarOpen ? 'w-64' : 'w-20'} bg-indigo-700 text-white transition-all duration-300 flex flex-col`}>
-        <div className="p-6 flex items-center gap-3">
-          <div className="h-8 w-8 bg-white rounded-lg flex items-center justify-center">
-            <div className="h-5 w-5 bg-indigo-600 rounded-sm"></div>
-          </div>
-          {isSidebarOpen && <span className="font-bold text-xl tracking-tight">AdminPro</span>}
-        </div>
+    useEffect(() => {
+        if (!savedEmail) {
+            window.location.href = '/login';
+        }
+    }, [savedEmail]);
 
-        <nav className="flex-1 px-4 space-y-2 mt-4">
-          {['Dashboard', 'Analytics', 'Users', 'Settings'].map((item) => (
-            <a key={item} href="#" className="flex items-center p-3 rounded-lg hover:bg-indigo-600 transition-colors group">
-              <span className="text-xl">📁</span>
-              {isSidebarOpen && <span className="ml-3 font-medium">{item}</span>}
-            </a>
-          ))}
-        </nav>
+    // Use the email for display
+    const user = {
+        name: userEmail ? userEmail.split('@')[0] : "User",
+        email: userEmail,
+        initials: userEmail ? userEmail.substring(0, 2).toUpperCase() : "US"
+    };
 
-        <button 
-          onClick={handleLogout}
-          className="m-4 p-3 flex items-center rounded-lg bg-indigo-800 hover:bg-red-500 transition-colors"
-        >
-          <span>🚪</span>
-          {isSidebarOpen && <span className="ml-3 font-medium">Logout</span>}
-        </button>
-      </aside>
+    // --- Speech Recognition ---
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const recognition = SpeechRecognition ? new SpeechRecognition() : null;
 
-      {/* Main Content */}
-      <main className="flex-1 flex flex-col">
-        {/* Top Navbar */}
-        <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-8 shadow-sm">
-          <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="text-gray-500 hover:text-indigo-600">
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
-          </button>
-          <div className="flex items-center gap-4">
-            <span className="text-sm font-medium text-gray-700">4mh23cs010@gmail.com</span>
-            <div className="h-10 w-10 rounded-full bg-indigo-100 border border-indigo-200 flex items-center justify-center text-indigo-700 font-bold">
-              JD
-            </div>
-          </div>
-        </header>
+    useEffect(() => {
+        if (recognition) {
+            recognition.continuous = false;
+            recognition.onresult = (event) => {
+                setInput(event.results[0][0].transcript);
+                setIsListening(false);
+            };
+            recognition.onend = () => setIsListening(false);
+        }
+    }, [recognition]);
 
-        {/* Dashboard Content */}
-        <div className="p-8">
-          <div className="mb-8">
-            <h1 className="text-2xl font-bold text-gray-800">Overview</h1>
-            <p className="text-gray-500">Welcome back! Here is what's happening today.</p>
-          </div>
+    const toggleListening = () => {
+        if (isListening) recognition?.stop();
+        else { setIsListening(true); recognition?.start(); }
+    };
 
-          {/* Stats Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            {stats.map((stat) => (
-              <div key={stat.name} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-2xl">{stat.icon}</span>
-                  <span className={`text-xs font-bold px-2 py-1 rounded-full ${stat.change.startsWith('+') ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
-                    {stat.change}
-                  </span>
+    // --- History & Session Management ---
+    useEffect(() => {
+        const fetchChatHistory = async () => {
+            try {
+                const response = await fetch(`http://127.0.0.1:8000/chat_history?email=${userEmail}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    setHistory(data.history || []);
+                }
+            } catch (err) {
+                console.error("Failed to load history:", err);
+            }
+        };
+
+        fetchChatHistory();
+    }, []);
+
+    // Scroll to bottom whenever messages update
+    useEffect(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, [messages]);
+
+    const startNewChat = () => {
+        setMessages([]);
+        setActiveSessionId(null);
+        setInput('');
+    };
+
+    const loadSession = async (sessionId) => {
+        setLoading(true);
+        try {
+            const response = await fetch(`http://127.0.0.1:8000/chat_history/${sessionId}`);
+            if (response.ok) {
+                const data = await response.json();
+                setMessages(data.messages);
+                setActiveSessionId(sessionId);
+            }
+        } catch (err) {
+            console.error("Error loading chat:", err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleAsk = async (e) => {
+        if (e) e.preventDefault();
+        if (!input.trim()) return;
+
+        const userMsg = { role: 'user', content: input };
+        setMessages((prev) => [...prev, userMsg]);
+        setInput('');
+        setLoading(true);
+
+        try {
+            const res = await fetch('http://127.0.0.1:8000/ask', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    message: userMsg.content,
+                    user_email: userEmail,
+                    session_id: activeSessionId,
+                    system_prompt: "You are a helpful assistant."
+                }),
+            });
+
+            if (!res.ok) throw new Error('Backend failed');
+
+            const data = await res.json();
+            setMessages((prev) => [...prev, { role: 'assistant', content: data.response }]); // Assuming backend returns { response: "..." }
+
+            // If this was a new session, update active ID and refresh history
+            if (!activeSessionId && data.session_id) {
+                setActiveSessionId(data.session_id);
+                // Optionally refresh history list here
+                const historyRes = await fetch(`http://127.0.0.1:8000/chat_history?email=${userEmail}`);
+                if (historyRes.ok) {
+                    const historyData = await historyRes.json();
+                    setHistory(historyData.history || []);
+                }
+            }
+        } catch (e) {
+            setMessages((prev) => [...prev, { role: 'assistant', content: "Connection error. Ensure your backend is running." }]);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleLogout = () => {
+        console.log("Logging out user...");
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('refresh_token');
+        window.location.href = '/login';
+    };
+
+    return (
+        <div className="flex h-screen bg-[#171717] text-white font-sans overflow-hidden">
+
+            {/* --- Sidebar --- */}
+            <aside
+                className={`${isSidebarOpen ? 'w-[260px]' : 'w-0'} bg-[#212121] flex-shrink-0 transition-all duration-300 ease-in-out overflow-hidden flex flex-col border-r border-white/5`}
+            >
+                <div className="p-3">
+                    <button
+                        onClick={startNewChat}
+                        className="flex items-center gap-3 px-3 py-3 w-full text-sm text-white bg-transparent hover:bg-[#2f2f2f] rounded-lg transition-colors border border-white/10 hover:border-white/5"
+                    >
+                        <div className="p-1 bg-white text-black rounded-full"><Plus size={14} strokeWidth={3} /></div>
+                        <span className="font-medium">New Chat</span>
+                    </button>
                 </div>
-                <h3 className="text-gray-500 text-sm font-medium">{stat.name}</h3>
-                <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
-              </div>
-            ))}
-          </div>
 
-          {/* Table Section */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-            <div className="p-6 border-b border-gray-50 flex justify-between items-center">
-              <h3 className="font-bold text-gray-800">Recent Transactions</h3>
-              <button className="text-sm text-indigo-600 font-semibold hover:underline">View All</button>
-            </div>
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-gray-50 text-gray-400 text-xs uppercase font-semibold">
-                  <th className="px-6 py-4">User</th>
-                  <th className="px-6 py-4">Status</th>
-                  <th className="px-6 py-4">Amount</th>
-                  <th className="px-6 py-4">Date</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {[1, 2, 3].map((i) => (
-                  <tr key={i} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-6 py-4 text-sm font-medium text-gray-900">User_{i}@example.com</td>
-                    <td className="px-6 py-4 text-sm">
-                      <span className="px-2 py-1 bg-green-100 text-green-700 rounded-md text-xs">Completed</span>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-600">$240.00</td>
-                    <td className="px-6 py-4 text-sm text-gray-500">Feb 11, 2026</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                <div className="flex-1 overflow-y-auto px-3 py-2">
+                    <div className="text-xs font-medium text-gray-500 mb-2 px-2">Recent</div>
+                    <div className="space-y-1">
+                        {history.length > 0 ? history.map((item, idx) => (
+                            <button
+                                key={item.id || idx}
+                                onClick={() => loadSession(item.id)}
+                                className={`w-full text-left px-3 py-2 rounded-lg text-sm truncate flex items-center gap-2 transition-colors ${activeSessionId === item.id ? 'bg-[#2f2f2f] text-white' : 'text-gray-300 hover:bg-[#2f2f2f]'}`}
+                            >
+                                <MessageSquare size={14} className="opacity-70" />
+                                <span className="truncate">{item.title || `Conversation ${idx + 1}`}</span>
+                            </button>
+                        )) : (
+                            <p className="text-xs text-gray-500 px-2 italic">No chat history</p>
+                        )}
+                    </div>
+                </div>
+
+                <div className="p-3 border-t border-white/5">
+                    <div className="group relative">
+                        <button className="flex items-center gap-3 w-full px-2 py-2 hover:bg-[#2f2f2f] rounded-lg transition-colors text-left">
+                            <div className="w-8 h-8 rounded-full bg-emerald-600 flex items-center justify-center text-xs font-bold ring-1 ring-white/10">
+                                {user.initials}
+                            </div>
+                            <div className="flex-1 overflow-hidden">
+                                <p className="text-sm font-medium truncate">{user.name}</p>
+                            </div>
+                        </button>
+                        {/* Mini User Popover (Simulated) */}
+                        <div className="absolute bottom-full left-0 w-full mb-2 bg-[#2f2f2f] rounded-xl border border-white/10 shadow-xl overflow-hidden opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
+                            <button onClick={handleLogout} className="w-full text-left px-4 py-3 text-sm text-red-400 hover:bg-white/5 flex items-center gap-2">
+                                <LogOut size={16} /> Log out
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+
+
+            {/* --- Main Content Area --- */}
+            <main className="flex-1 flex flex-col relative min-w-0">
+
+                {/* Mobile Sidebar Toggle (visible only when sidebar is closed or on mobile) */}
+                <div className="absolute top-4 left-4 z-20">
+                    <button
+                        onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                        className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+                        title={isSidebarOpen ? "Close Sidebar" : "Open Sidebar"}
+                    >
+                        {isSidebarOpen ? <Menu size={20} className="hidden md:block" /> : <Menu size={20} />}
+                    </button>
+                </div>
+
+                {/* Top Bar */}
+                <header className="w-full p-4 flex justify-between items-center bg-transparent z-10">
+                    <div className="flex items-center gap-2 mx-auto md:ml-12">
+                        {/* Replaced 'ChatGPT' with 'Model X' or similar generic name as requested */}
+                        <button className="flex items-center gap-2 px-3 py-1.5 hover:bg-white/5 rounded-lg cursor-pointer transition text-gray-300 font-medium">
+                            <span>AI Assistant</span>
+                            <span className="text-gray-500 text-xs">▼</span>
+                        </button>
+                    </div>
+                    <div className="flex items-center gap-2"></div>
+                </header>
+
+
+                {/* Chat Area */}
+                <div className="flex-1 overflow-y-auto px-4 md:px-6 scroll-smooth">
+                    {messages.length === 0 ? (
+                        <div className="h-full flex flex-col items-center justify-center p-8 text-center text-white/90">
+                            <div className="bg-white/10 p-4 rounded-full mb-6">
+                                <Sparkles size={32} className="text-white" />
+                            </div>
+                            <h1 className="text-3xl md:text-4xl font-medium mb-4">How can I help you today?</h1>
+                        </div>
+                    ) : (
+                        <div className="max-w-3xl mx-auto py-6 space-y-6">
+                            {messages.map((msg, idx) => (
+                                <div key={idx} className={`flex gap-4 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                                    {msg.role !== 'user' && (
+                                        <div className="w-8 h-8 rounded-full bg-emerald-600 flex items-center justify-center text-xs font-bold shrink-0 mt-1">AI</div>
+                                    )}
+                                    <div className={`max-w-[80%] p-4 rounded-2xl ${msg.role === 'user'
+                                        ? 'bg-[#2f2f2f] text-white rounded-tr-sm'
+                                        : 'text-gray-200'
+                                        }`}>
+                                        <p className="whitespace-pre-wrap leading-relaxed">{msg.content}</p>
+                                    </div>
+                                </div>
+                            ))}
+                            {loading && (
+                                <div className="flex gap-4">
+                                    <div className="w-8 h-8 rounded-full bg-emerald-600 flex items-center justify-center text-xs font-bold shrink-0 mt-1">AI</div>
+                                    <div className="flex items-center gap-1 h-8 mt-1">
+                                        <span className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" />
+                                        <span className="w-2 h-2 bg-gray-500 rounded-full animate-bounce [animation-delay:0.2s]" />
+                                        <span className="w-2 h-2 bg-gray-500 rounded-full animate-bounce [animation-delay:0.4s]" />
+                                    </div>
+                                </div>
+                            )}
+                            <div ref={messagesEndRef} />
+                        </div>
+                    )}
+                </div>
+
+
+                {/* Input Area */}
+                <div className="p-4 md:p-6 pb-8">
+                    <div className="max-w-3xl mx-auto">
+                        <div className="relative flex items-center bg-[#2f2f2f]/80 backdrop-blur-sm border border-white/10 rounded-3xl p-2 pl-4 focus-within:border-white/20 transition-all shadow-xl">
+                            <button className="p-2 text-white/40 hover:text-white transition rounded-full hover:bg-white/5">
+                                <Plus size={20} />
+                            </button>
+
+                            <form onSubmit={handleAsk} className="flex-1 flex">
+                                <input
+                                    type="text"
+                                    placeholder="Message AI Assistant..."
+                                    className="flex-1 bg-transparent py-3 px-3 outline-none text-base text-white placeholder-white/30"
+                                    value={input}
+                                    onChange={(e) => setInput(e.target.value)}
+                                />
+                            </form>
+
+                            <div className="flex items-center gap-1.5 pr-2">
+                                <button
+                                    onClick={toggleListening}
+                                    className={`p-2 rounded-full transition-all ${isListening ? 'bg-red-500 text-white animate-pulse' : 'text-white/40 hover:text-white hover:bg-white/10'}`}
+                                >
+                                    {isListening ? <MicOff size={20} /> : <Mic size={20} />}
+                                </button>
+
+                                <button
+                                    onClick={handleAsk}
+                                    disabled={loading || !input.trim()}
+                                    className={`p-2 rounded-full transition-all ${input.trim()
+                                        ? 'bg-white text-black hover:bg-gray-200'
+                                        : 'bg-white/10 text-white/20 cursor-not-allowed'
+                                        }`}
+                                >
+                                    {loading ? <div className="w-5 h-5 border-2 border-black/20 border-t-black rounded-full animate-spin" /> : <Send size={20} />}
+                                </button>
+                            </div>
+                        </div>
+                        <div className="text-center mt-3">
+                            <p className="text-xs text-gray-500">AI can make mistakes. Consider checking important information.</p>
+                        </div>
+                    </div>
+                </div>
+
+            </main>
         </div>
-      </main>
-    </div>
-  );
+    );
 };
 
 export default Dashboard;

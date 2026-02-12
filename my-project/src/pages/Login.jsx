@@ -6,8 +6,8 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
-  
-  const navigate = useNavigate(); 
+
+  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -26,7 +26,8 @@ const Login = () => {
       if (response.ok) {
         localStorage.setItem('access_token', data.access_token);
         localStorage.setItem('refresh_token', data.refresh_token);
-        navigate('/dashboard'); 
+        localStorage.setItem('user_email', email);
+        navigate('/dashboard');
       } else {
         setError(data.detail || 'Invalid credentials. Please try again.');
       }
@@ -78,8 +79,8 @@ const Login = () => {
             <div>
               <div className="flex justify-between items-center mb-1.5 ml-1">
                 <label className="text-sm font-semibold text-slate-700">Password</label>
-                <Link 
-                  to="/forgot-password" 
+                <Link
+                  to="/forgot-password"
                   className="text-xs font-bold text-indigo-600 hover:text-indigo-700 transition-colors"
                 >
                   Forgot Password?
