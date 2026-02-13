@@ -110,7 +110,7 @@ const Dashboard = () => {
                     message: userMsg.content,
                     user_email: userEmail,
                     session_id: activeSessionId,
-                    system_prompt: "You are a helpful assistant."
+                    system_prompt: "You are Aether, a unique and helpful AI assistant."
                 }),
             });
 
@@ -218,8 +218,7 @@ const Dashboard = () => {
                     <div className="flex items-center gap-2 mx-auto md:ml-12">
                         {/* Replaced 'ChatGPT' with 'Model X' or similar generic name as requested */}
                         <button className="flex items-center gap-2 px-3 py-1.5 hover:bg-white/5 rounded-lg cursor-pointer transition text-gray-300 font-medium">
-                            <span>AI Assistant</span>
-                            <span className="text-gray-500 text-xs">▼</span>
+                            <span>Aether</span>
                         </button>
                     </div>
                     <div className="flex items-center gap-2"></div>
@@ -277,7 +276,7 @@ const Dashboard = () => {
                             <form onSubmit={handleAsk} className="flex-1 flex">
                                 <input
                                     type="text"
-                                    placeholder="Message AI Assistant..."
+                                    placeholder="Message Aether..."
                                     className="flex-1 bg-transparent py-3 px-3 outline-none text-base text-white placeholder-white/30"
                                     value={input}
                                     onChange={(e) => setInput(e.target.value)}
