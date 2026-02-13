@@ -53,7 +53,7 @@ const Dashboard = () => {
     useEffect(() => {
         const fetchChatHistory = async () => {
             try {
-                const response = await fetch(`http://127.0.0.1:8000/chat_history?email=${userEmail}`);
+                const response = await fetch(`${import.meta.env.VITE_API_BASE}/chat_history?email=${userEmail}`);
                 if (response.ok) {
                     const data = await response.json();
                     setHistory(data.history || []);
@@ -80,7 +80,7 @@ const Dashboard = () => {
     const loadSession = async (sessionId) => {
         setLoading(true);
         try {
-            const response = await fetch(`http://127.0.0.1:8000/chat_history/${sessionId}`);
+            const response = await fetch(`${import.meta.env.VITE_API_BASE}/chat_history/${sessionId}`);
             if (response.ok) {
                 const data = await response.json();
                 setMessages(data.messages);
@@ -103,7 +103,7 @@ const Dashboard = () => {
         setLoading(true);
 
         try {
-            const res = await fetch('http://127.0.0.1:8000/ask', {
+            const res = await fetch(`${import.meta.env.VITE_API_BASE}/ask`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -123,7 +123,7 @@ const Dashboard = () => {
             if (!activeSessionId && data.session_id) {
                 setActiveSessionId(data.session_id);
                 // Optionally refresh history list here
-                const historyRes = await fetch(`http://127.0.0.1:8000/chat_history?email=${userEmail}`);
+                const historyRes = await fetch(`${import.meta.env.VITE_API_BASE}/chat_history?email=${userEmail}`);
                 if (historyRes.ok) {
                     const historyData = await historyRes.json();
                     setHistory(historyData.history || []);
